@@ -8,8 +8,12 @@ GLuint shader_program;
 
 GLfloat verts[] = {
     0.0f, 1.0f,
+    -1.0f, 1.0f,
     -1.0f, -1.0f,
-    1.0f, -1.0f
+
+    0.0f, 1.0f,
+    1.0f, -1.0f,
+    1.0f, 1.0f
 };
 
 const char* vertex_shader =
@@ -52,5 +56,6 @@ void renderer_init() {
 void renderer_render() {
     glUseProgram(shader_program);
     glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
 }
