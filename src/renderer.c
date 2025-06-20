@@ -7,9 +7,18 @@ GLuint shader_program;
 
 void renderer_init() {
     GLfloat verts[] = {
-        0.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+
+        1.0f, 1.0f,
+        0.0f, 1.0f, 0.0f,
+        -1.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+
         -1.0f, -1.0f,
+        0.0f, 0.0f, 1.0f,
         1.0f, -1.0f,
+        0.0f, 1.0f, 0.0f
     };
 
     GLuint bufferID;
@@ -20,19 +29,25 @@ void renderer_init() {
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, NULL);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (char*)(sizeof(GLfloat)*2));
 
-    const char* vertexShaderSource =
-        "#version 410 core\n"
-        "in vec3 vp;"
+    const char *vertexShaderSource =
+        "#version 430 core\n"
+        "in vec3 pos;"
+        "in vec3 vertexColor;"
+        "out vec3 color;"
         "void main() {"
-        "  gl_Position = vec4(vp, 1.0);"
+        "   gl_Position = vec4(pos, 1.0);"
+        "   color = vertexColor;"
         "}";
-    const char* fragmentShaderSource =
-        "#version 410 core\n"
-        "out vec4 frag_colour;"
+    const char *fragmentShaderSource =
+        "#version 430 core\n"
+        "out vec4 fragColor;"
+        "in vec3 color;"
         "void main() {"
-        "  frag_colour = vec4(1.0, 0.0, 0.0, 1.0);"
+        "   fragColor = vec4(color, 1.0);"
         "}";
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -59,7 +74,7 @@ void renderer_render() {
     glUseProgram(shader_program);
     glBindVertexArray(vao);
 
-    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
     glBindVertexArray(0);
 }
