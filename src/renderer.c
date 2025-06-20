@@ -2,17 +2,14 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-GLuint vao = 0;
+GLuint vao;
 GLuint shader_program;
 
 void renderer_init() {
     GLfloat verts[] = {
         0.0f, 1.0f,
-        -1.0f, 1.0f,
         -1.0f, -1.0f,
-    
         1.0f, -1.0f,
-        1.0f, 1.0f
     };
 
     GLuint bufferID;
@@ -25,29 +22,31 @@ void renderer_init() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    const char* vertex_shader =
+    const char* vertexShaderSource =
         "#version 410 core\n"
         "in vec3 vp;"
         "void main() {"
         "  gl_Position = vec4(vp, 1.0);"
         "}";
-    const char* fragment_shader =
+    const char* fragmentShaderSource =
         "#version 410 core\n"
         "out vec4 frag_colour;"
         "void main() {"
         "  frag_colour = vec4(1.0, 0.0, 0.0, 1.0);"
         "}";
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertex_shader, NULL);
-    glCompileShader(vs);
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragment_shader, NULL);
-    glCompileShader(fs);
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
 
     shader_program = glCreateProgram();
-    glAttachShader(shader_program, fs);
-    glAttachShader(shader_program, vs);
+    glAttachShader(shader_program, fragmentShader);
+    glAttachShader(shader_program, vertexShader);
     glLinkProgram(shader_program);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
     GLushort indices[] = {0,1,2, 0,3,4};
     GLuint indexBufferID;
@@ -60,7 +59,7 @@ void renderer_render() {
     glUseProgram(shader_program);
     glBindVertexArray(vao);
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);
 
     glBindVertexArray(0);
 }
