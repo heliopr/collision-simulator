@@ -4,7 +4,6 @@ CFLAGS = -Wall -O0
 
 SRC=$(wildcard src/*.c)
 
-
 all: clean build
 
 run: build

@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
+#include "renderer.h"
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -33,10 +35,18 @@ int main()
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    // RENDERER INIT
+    renderer_init();
+
     while(!glfwWindowShouldClose(window))
     {
+        glfwPollEvents();        
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // RENDERER RENDER
+        renderer_render();
+
         glfwSwapBuffers(window);
-        glfwPollEvents();    
     }
   
     glfwTerminate();
