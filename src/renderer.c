@@ -6,6 +6,11 @@
 GLuint vao;
 GLuint shader;
 
+const float X_DELTA = 0.3f;
+const int MAX_TRIS = 5;
+const int TRIANGLE_BYTE_SIZE = sizeof(GLfloat) * 6 * 3;
+int triangles = 0;
+
 int checkStatus(GLuint objectID, PFNGLGETSHADERIVPROC ivFun, PFNGLGETSHADERINFOLOGPROC infoLogFun, GLenum statusType) {
     GLint status;
     ivFun(objectID, statusType, &status);
@@ -68,28 +73,10 @@ void compileShaderProgram() {
 }
 
 void setupRenderer() {
-    const GLfloat z1 = 0.5f;
-    const GLfloat z2 = -0.5f;
-    GLfloat verts[] = {
-        1.0f, -1.0f, z1,
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, -1.0f,
-        0.0f, 0.0f, 1.0f,
-        -1.0f, -1.0f, z1,
-        1.0f, 0.0f, 0.0f,
-
-        1.0f, 1.0f, z2,
-        0.0f, 0.0f, 1.0f,
-        -1.0f, 1.0f, z2,
-        0.0f, 0.0f, 1.0f,
-        0.0f, -1.0f, z2,
-        0.0f, 0.0f, 1.0f,
-    };
-
     GLuint bufferID;
     glGenBuffers(1, &bufferID);
     glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, MAX_TRIS * TRIANGLE_BYTE_SIZE, NULL, GL_STATIC_DRAW);
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -97,12 +84,26 @@ void setupRenderer() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*6, NULL);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*6, (char*)(sizeof(GLfloat)*3));
+}
 
-    GLushort indices[] = {0,1,2, 3,4,5};
-    GLuint indexBufferID;
-    glGenBuffers(1, &indexBufferID);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+void addTri() {
+    if (triangles == MAX_TRIS)
+        return;
+
+    GLfloat x = -1 + triangles * X_DELTA;
+    GLfloat tri[] = {
+        x, 1.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+
+        x+X_DELTA, 1.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+
+        x, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f
+    };
+
+    glBufferSubData(GL_ARRAY_BUFFER, triangles * TRIANGLE_BYTE_SIZE, TRIANGLE_BYTE_SIZE, tri);
+    triangles++;
 }
 
 void renderer_init() {
@@ -116,7 +117,7 @@ void renderer_render() {
 
     glUseProgram(shader);
     glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
-    //glBindVertexArray(0); keeping this commented in case it breaks something
+    addTri();
+    glDrawArrays(GL_TRIANGLES, 0, triangles * 3);
 }
