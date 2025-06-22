@@ -1,38 +1,35 @@
-#include "renderer.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <stdio.h>
+#include "renderer.h"
 
 GLuint vao;
-GLuint shader_program;
+GLuint shader;
 
-void renderer_init() {
-    GLfloat verts[] = {
-        0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
+int checkStatus(GLuint objectID, PFNGLGETSHADERIVPROC ivFun, PFNGLGETSHADERINFOLOGPROC infoLogFun, GLenum statusType) {
+    GLint status;
+    ivFun(objectID, statusType, &status);
+    if (status != GL_TRUE) {
+        GLint logLen;
+        ivFun(objectID, GL_INFO_LOG_LENGTH, &logLen);
 
-        1.0f, 1.0f,
-        0.0f, 1.0f, 0.0f,
-        -1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
+        char buff[logLen];
+        infoLogFun(objectID, logLen, NULL, buff);
+        printf("ERROR COMPILING OBJECT %d: %s\n", objectID, buff);
+        return 0;
+    }
+    return 1;
+}
 
-        -1.0f, -1.0f,
-        0.0f, 0.0f, 1.0f,
-        1.0f, -1.0f,
-        0.0f, 1.0f, 0.0f
-    };
+int checkShader(GLuint shaderID) {
+    return checkStatus(shaderID, glGetShaderiv, glGetShaderInfoLog, GL_COMPILE_STATUS);
+}
 
-    GLuint bufferID;
-    glGenBuffers(1, &bufferID);
-    glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+int checkProgram(GLuint programID) {
+    return checkStatus(programID, glGetProgramiv, glGetProgramInfoLog, GL_LINK_STATUS);
+}
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, NULL);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (char*)(sizeof(GLfloat)*2));
-
+void compileShaderProgram() {
     const char *vertexShaderSource =
         "#version 430 core\n"
         "in vec3 pos;"
@@ -56,25 +53,70 @@ void renderer_init() {
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
 
-    shader_program = glCreateProgram();
-    glAttachShader(shader_program, fragmentShader);
-    glAttachShader(shader_program, vertexShader);
-    glLinkProgram(shader_program);
+    if (!checkShader(vertexShader) || !checkShader(fragmentShader))
+        return;
+
+    shader = glCreateProgram();
+    glAttachShader(shader, fragmentShader);
+    glAttachShader(shader, vertexShader);
+    glLinkProgram(shader);
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    GLushort indices[] = {0,1,2, 0,3,4};
+    if (!checkProgram(shader))
+        return;
+}
+
+void setupRenderer() {
+    const GLfloat z1 = 0.5f;
+    const GLfloat z2 = -0.5f;
+    GLfloat verts[] = {
+        1.0f, -1.0f, z1,
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, -1.0f,
+        0.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, z1,
+        1.0f, 0.0f, 0.0f,
+
+        1.0f, 1.0f, z2,
+        0.0f, 0.0f, 1.0f,
+        -1.0f, 1.0f, z2,
+        0.0f, 0.0f, 1.0f,
+        0.0f, -1.0f, z2,
+        0.0f, 0.0f, 1.0f,
+    };
+
+    GLuint bufferID;
+    glGenBuffers(1, &bufferID);
+    glBindBuffer(GL_ARRAY_BUFFER, bufferID);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*6, NULL);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*6, (char*)(sizeof(GLfloat)*3));
+
+    GLushort indices[] = {0,1,2, 3,4,5};
     GLuint indexBufferID;
     glGenBuffers(1, &indexBufferID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 }
 
-void renderer_render() {
-    glUseProgram(shader_program);
-    glBindVertexArray(vao);
+void renderer_init() {
+    glEnable(GL_DEPTH_TEST);
+    setupRenderer();
+    compileShaderProgram();
+}
 
+void renderer_render() {
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shader);
+    glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
-    glBindVertexArray(0);
+    //glBindVertexArray(0); keeping this commented in case it breaks something
 }
