@@ -1,5 +1,5 @@
 CC = gcc
-LIBS = -I/usr/local/include $(shell pkg-config --static --libs glfw3) -I./include/
+LIBS = -I/usr/local/include $(shell pkg-config --static --libs glfw3) $(shell pkg-config --static --libs cglm) -I./include/
 CFLAGS = -Wall -O0
 
 SRC=$(wildcard src/*.c)

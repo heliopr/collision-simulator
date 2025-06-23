@@ -1,14 +1,16 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include "renderer.h"
 
 GLuint vao;
 GLuint shader;
+GLuint texture;
 
 const float X_DELTA = 0.3f;
 const int MAX_TRIS = 5;
-const int TRIANGLE_BYTE_SIZE = sizeof(GLfloat) * 6 * 3;
 int triangles = 0;
 
 int checkStatus(GLuint objectID, PFNGLGETSHADERIVPROC ivFun, PFNGLGETSHADERINFOLOGPROC infoLogFun, GLenum statusType) {
@@ -34,22 +36,48 @@ int checkProgram(GLuint programID) {
     return checkStatus(programID, glGetProgramiv, glGetProgramInfoLog, GL_LINK_STATUS);
 }
 
+void loadTexture() {
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("textures/test.png", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        printf("Failed to load texture\n");
+    }
+    stbi_image_free(data);
+}
+
 void compileShaderProgram() {
     const char *vertexShaderSource =
         "#version 430 core\n"
         "in vec3 pos;"
         "in vec3 vertexColor;"
+        "in vec2 textCoord;"
         "out vec3 color;"
+        "out vec2 coord;"
         "void main() {"
         "   gl_Position = vec4(pos, 1.0);"
         "   color = vertexColor;"
+        "   coord = textCoord;"
         "}";
     const char *fragmentShaderSource =
         "#version 430 core\n"
         "out vec4 fragColor;"
         "in vec3 color;"
+        "in vec2 coord;"
+        "uniform sampler2D text;"
         "void main() {"
-        "   fragColor = vec4(color, 1.0);"
+        "   fragColor = texture(text, coord);"
         "}";
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -76,14 +104,16 @@ void setupRenderer() {
     GLuint bufferID;
     glGenBuffers(1, &bufferID);
     glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-    glBufferData(GL_ARRAY_BUFFER, MAX_TRIS * TRIANGLE_BYTE_SIZE, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, MAX_TRIS * sizeof(Triangle), NULL, GL_STATIC_DRAW);
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*6, NULL);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), NULL);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*6, (char*)(sizeof(GLfloat)*3));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (char*)(sizeof(GLfloat)*3));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(6 * sizeof(GLfloat)));
 }
 
 void addTri() {
@@ -91,29 +121,39 @@ void addTri() {
         return;
 
     GLfloat x = -1 + triangles * X_DELTA;
-    GLfloat tri[] = {
-        x, 1.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
+    Triangle tri = {
+        {
+            {x, 1.0f, 0.0f},
+            {1.0f, 0.0f, 0.0f},
+            {0.0f, 1.0f}
+        },
 
-        x+X_DELTA, 1.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
+        {
+            {x+X_DELTA, 1.0f, 0.0f},
+            {1.0f, 0.0f, 0.0f},
+            {1.0f, 1.0f}
+        },
 
-        x, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f
+        {
+            {x, 0.0f, 0.0f},
+            {1.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f}
+        }
     };
 
-    glBufferSubData(GL_ARRAY_BUFFER, triangles * TRIANGLE_BYTE_SIZE, TRIANGLE_BYTE_SIZE, tri);
+    glBufferSubData(GL_ARRAY_BUFFER, triangles * sizeof(Triangle), sizeof(Triangle), tri);
     triangles++;
 }
 
 void renderer_init() {
     glEnable(GL_DEPTH_TEST);
     setupRenderer();
+    loadTexture();
     compileShaderProgram();
 }
 
 void renderer_render() {
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shader);
     glBindVertexArray(vao);
