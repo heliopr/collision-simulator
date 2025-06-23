@@ -65,8 +65,9 @@ void compileShaderProgram() {
         "in vec2 textCoord;"
         "out vec3 color;"
         "out vec2 coord;"
+        "uniform mat4 transform;"
         "void main() {"
-        "   gl_Position = vec4(pos, 1.0);"
+        "   gl_Position = transform * vec4(pos, 1.0);"
         "   color = vertexColor;"
         "   coord = textCoord;"
         "}";
@@ -77,7 +78,7 @@ void compileShaderProgram() {
         "in vec2 coord;"
         "uniform sampler2D text;"
         "void main() {"
-        "   fragColor = texture(text, coord);"
+        "   fragColor = texture(text, coord) * vec4(color, 1.0);"
         "}";
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -124,19 +125,19 @@ void addTri() {
     Triangle tri = {
         {
             {x, 1.0f, 0.0f},
-            {1.0f, 0.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f},
             {0.0f, 1.0f}
         },
 
         {
             {x+X_DELTA, 1.0f, 0.0f},
-            {1.0f, 0.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f},
             {1.0f, 1.0f}
         },
 
         {
             {x, 0.0f, 0.0f},
-            {1.0f, 0.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f},
             {0.0f, 0.0f}
         }
     };
@@ -155,7 +156,15 @@ void renderer_init() {
 void renderer_render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    mat4 transform;
+    glm_mat4_identity(transform);
+    glm_translate(transform, (vec3){0.5f, -0.5f, 0.0f});
+    glm_rotate(transform, (float)glfwGetTime(), (vec3){0.0f, 0.0f, 1.0f});
+
     glUseProgram(shader);
+    unsigned int transformLoc = glGetUniformLocation(shader, "transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, (const float*)transform);
+
     glBindVertexArray(vao);
 
     addTri();
