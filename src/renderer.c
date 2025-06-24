@@ -9,10 +9,6 @@ GLuint vao;
 GLuint shader;
 GLuint texture;
 
-const float X_DELTA = 0.3f;
-const int MAX_TRIS = 5;
-int triangles = 0;
-
 int checkStatus(GLuint objectID, PFNGLGETSHADERIVPROC ivFun, PFNGLGETSHADERINFOLOGPROC infoLogFun, GLenum statusType) {
     GLint status;
     ivFun(objectID, statusType, &status);
@@ -61,24 +57,22 @@ void compileShaderProgram() {
     const char *vertexShaderSource =
         "#version 430 core\n"
         "in vec3 pos;"
-        "in vec3 vertexColor;"
         "in vec2 textCoord;"
-        "out vec3 color;"
         "out vec2 coord;"
-        "uniform mat4 transform;"
+        "uniform mat4 model;"
+        "uniform mat4 view;"
+        "uniform mat4 projection;"
         "void main() {"
-        "   gl_Position = transform * vec4(pos, 1.0);"
-        "   color = vertexColor;"
+        "   gl_Position = projection * view * model * vec4(pos, 1.0);"
         "   coord = textCoord;"
         "}";
     const char *fragmentShaderSource =
         "#version 430 core\n"
         "out vec4 fragColor;"
-        "in vec3 color;"
         "in vec2 coord;"
         "uniform sampler2D text;"
         "void main() {"
-        "   fragColor = texture(text, coord) * vec4(color, 1.0);"
+        "   fragColor = texture(text, coord);"
         "}";
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -102,48 +96,61 @@ void compileShaderProgram() {
 }
 
 void setupRenderer() {
+    GLfloat vertices[] = {
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    };
+
     GLuint bufferID;
     glGenBuffers(1, &bufferID);
     glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-    glBufferData(GL_ARRAY_BUFFER, MAX_TRIS * sizeof(Triangle), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), NULL);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (char*)(sizeof(GLfloat)*3));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(6 * sizeof(GLfloat)));
-}
-
-void addTri() {
-    if (triangles == MAX_TRIS)
-        return;
-
-    GLfloat x = -1 + triangles * X_DELTA;
-    Triangle tri = {
-        {
-            {x, 1.0f, 0.0f},
-            {1.0f, 1.0f, 1.0f},
-            {0.0f, 1.0f}
-        },
-
-        {
-            {x+X_DELTA, 1.0f, 0.0f},
-            {1.0f, 1.0f, 1.0f},
-            {1.0f, 1.0f}
-        },
-
-        {
-            {x, 0.0f, 0.0f},
-            {1.0f, 1.0f, 1.0f},
-            {0.0f, 0.0f}
-        }
-    };
-
-    glBufferSubData(GL_ARRAY_BUFFER, triangles * sizeof(Triangle), sizeof(Triangle), tri);
-    triangles++;
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (char*)(sizeof(GLfloat)*3));
 }
 
 void renderer_init() {
@@ -156,17 +163,24 @@ void renderer_init() {
 void renderer_render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    mat4 transform;
-    glm_mat4_identity(transform);
-    glm_translate(transform, (vec3){0.5f, -0.5f, 0.0f});
-    glm_rotate(transform, (float)glfwGetTime(), (vec3){0.0f, 0.0f, 1.0f});
+    mat4 model, view, projection;
+    glm_mat4_identity(model);
+    glm_mat4_identity(view);
+    glm_mat4_identity(projection);
+
+    vec3 axis = {0.5f, 1.0f, 0.0f};
+    glm_rotate(model, (float)glfwGetTime(), axis);
+    glm_translate(view, (vec3){0.0f, 0.0f, -3.0f});
+    glm_perspective(glm_rad(45.0f), 800.0f/600.0f, 0.1f, 100.0f, projection);
+    unsigned int modelLoc = glGetUniformLocation(shader, "model");
+    unsigned int viewLoc  = glGetUniformLocation(shader, "view");
+    unsigned int projectionLoc  = glGetUniformLocation(shader, "projection");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
 
     glUseProgram(shader);
-    unsigned int transformLoc = glGetUniformLocation(shader, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, (const float*)transform);
 
     glBindVertexArray(vao);
-
-    addTri();
-    glDrawArrays(GL_TRIANGLES, 0, triangles * 3);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
 }
