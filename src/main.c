@@ -36,7 +36,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     // RENDERER INIT
-    renderer_init();
+    renderer_init(window);
 
     while(!glfwWindowShouldClose(window))
     {
