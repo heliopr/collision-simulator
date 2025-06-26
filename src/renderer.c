@@ -4,6 +4,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include "renderer.h"
+#include <cglm/cglm.h>
 
 GLFWwindow *window;
 GLuint vao;
@@ -176,32 +177,33 @@ void renderer_init(GLFWwindow *w) {
     compileShaderProgram();
 }
 
-void renderer_render() {
+void renderer_render(double deltaTime, vec3 cameraPos, vec3 cameraFront, vec3 cameraUp) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    mat4 view, projection;
-    glm_mat4_identity(view);
-    glm_mat4_identity(projection);
 
     int width, height;
     glfwGetWindowSize(window, &width, &height);
 
-    glm_translate(view, (vec3){0.0f, 0.0f, -3.0f});
+    mat4 projection;
+    glm_mat4_identity(projection);
     glm_perspective(glm_rad(45.0f), (float)width/(float)height, 0.1f, 100.0f, projection);
-    unsigned int viewLoc  = glGetUniformLocation(shader, "view");
     unsigned int projectionLoc  = glGetUniformLocation(shader, "projection");
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
-    glUseProgram(shader);
+    
+    mat4 view;
+    glm_mat4_identity(view);
+    vec3 at;
+    glm_vec3_add(cameraPos, cameraFront, at);
+    glm_lookat(cameraPos, at, cameraUp, view);
+    unsigned int viewLoc  = glGetUniformLocation(shader, "view");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
 
+    glUseProgram(shader);
     unsigned int modelLoc = glGetUniformLocation(shader, "model");
     glBindVertexArray(vao);
     for (int i = 0; i < 10; i++) {
         mat4 model;
         glm_mat4_identity(model);
         glm_translate(model, positions[i]);
-        float ang = 20.0f * (i+1);
-        glm_rotate(model, glm_rad(ang), (vec3){1.0f, 0.3f, 0.5f});
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
